@@ -1,0 +1,42 @@
+{
+  "name": "@couloir-demos/types",
+  "version": "0.2.1",
+  "license": "LGPL-3.0-only",
+  "type": "module",
+  "main": "dist/src/index.js",
+  "types": "./dist/src/index.d.ts",
+  "exports": {
+    ".": {
+      "require": "./dist/src/index.js",
+      "import": "./dist/src/index.js",
+      "types": "./dist/src/index.d.ts"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "packageManager": "pnpm@10.12.1",
+  "devDependencies": {
+    "@eslint/js": "^9.28.0",
+    "@tapjs/asserts": "^4.0.1",
+    "@tapjs/tsx": "^3.0.1",
+    "@types/web": "^0.0.246",
+    "@typescript/lib-dom": "npm:@types/web@^0.0.246",
+    "eslint": "^9.28.0",
+    "prettier": "^3.5.3",
+    "tap": "^21.1.0",
+    "tsc-esm-fix": "^3.1.2",
+    "typescript": "^5.8.3",
+    "typescript-eslint": "^8.34.0",
+    "typescript-language-server": "^4.3.4"
+  },
+  "dependencies": {
+    "arktype": "^2.1.20"
+  },
+  "tap": {
+    "plugin": [
+      "@tapjs/tsx",
+      "!@tapjs/typescript"
+    ]
+  }
+}

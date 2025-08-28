@@ -1,0 +1,40 @@
+{
+  "name": "@couloir-demos/mcp-solana",
+  "version": "0.1.0",
+  "license": "LGPL-3.0-only",
+  "type": "module",
+  "main": "dist/src/index.js",
+  "types": "./dist/src/index.d.ts",
+  "files": [
+    "dist"
+  ],
+  "exports": {
+    ".": "./dist/src/index.js",
+    "./client": "./dist/src/client.js"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.34.0",
+    "@tapjs/asserts": "^4.0.1",
+    "@types/node": "^24.3.0",
+    "@types/tap": "^18.0.0",
+    "eslint": "^9.34.0",
+    "prettier": "^3.6.2",
+    "tap": "^21.1.0",
+    "tsc-esm-fix": "^3.1.2",
+    "tsx": "^4.20.5",
+    "typescript": "^5.9.2",
+    "typescript-eslint": "^8.41.0",
+    "typescript-language-server": "^4.4.0"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.17.4",
+    "@solana/spl-token": "^0.4.13",
+    "@solana/web3.js": "^1.98.4",
+    "@types/express": "^5.0.3",
+    "arktype": "^2.1.20",
+    "dotenv": "^17.2.1",
+    "express": "^5.1.0",
+    "undici": "^7.15.0",
+    "zod": "^3.25.76"
+  }
+}

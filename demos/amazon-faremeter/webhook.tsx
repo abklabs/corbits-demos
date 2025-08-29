@@ -8,6 +8,7 @@ import {
   errorResponse,
   parseCrossmintWebhookEvent,
 } from "./utils.tsx";
+import { sendOrderCompletedEmail } from "./emails.tsx";
 
 const WEBHOOK_SECRET = Deno.env.get("CROSSMINT_WEBHOOK_SECRET");
 if (!WEBHOOK_SECRET) throw new Error("CROSSMINT_WEBHOOK_SECRET must be set");
@@ -68,7 +69,8 @@ export const webhook = async (c: Context) => {
 
   const key = `order:${mapped.orderId}`;
   const order = (await blob.getJSON<Record<string, unknown>>(key)) ?? {};
-  const next = parseCrossmintWebhookEvent(type, order.status);
+  const currentStatus = order.status as string;
+  const next = parseCrossmintWebhookEvent(type, currentStatus);
 
   await blob.setJSON(key, {
     ...order,
@@ -77,6 +79,15 @@ export const webhook = async (c: Context) => {
     crossmintLastEvent: { type, at: Date.now() },
     updatedAt: Date.now(),
   });
+
+  if (currentStatus !== "completed" && next === "completed") {
+    await sendOrderCompletedEmail({
+      orderId: mapped.orderId,
+      email: order.email as string,
+      status: "completed",
+      signature: order.signature as string,
+    });
+  }
 
   return new Response("ok", { status: 200, headers: CORS_HEADERS });
 };

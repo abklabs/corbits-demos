@@ -2,6 +2,7 @@
 import { Context } from "npm:hono@3";
 import { blob } from "https://esm.town/v/std/blob";
 import { optionsResponse, errorResponse, successResponse } from "./utils.tsx";
+import { sendPaymentReceivedEmail } from "./emails.tsx";
 
 const HOST_ORIGIN = Deno.env.get("HOST_ORIGIN");
 if (!HOST_ORIGIN) throw new Error("HOST_ORIGIN must be set");
@@ -37,6 +38,12 @@ export const paid = async (c: Context) => {
       status: nextStatus,
       paidAt: order.paidAt ?? Date.now(),
       updatedAt: Date.now(),
+    });
+
+    await sendPaymentReceivedEmail({
+      orderId,
+      email: order.email as string,
+      status: nextStatus,
     });
   }
 

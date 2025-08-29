@@ -1,0 +1,24 @@
+# Claude configuration
+.claude
+CLAUDE.md
+
+# Build outputs
+dist/
+node_modules/
+
+# TypeScript configuration
+tsconfig.json
+package.json
+
+# Development files
+*.md
+.vtignore
+
+# Editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+

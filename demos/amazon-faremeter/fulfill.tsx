@@ -16,6 +16,10 @@ import {
   saveOrder,
   type OrderStatus,
 } from "./utils.tsx";
+import {
+  sendFulfillmentStartedEmail,
+  sendOrderFailedEmail,
+} from "./emails.tsx";
 
 const CROSSMINT_API_KEY = Deno.env.get("CROSSMINT_API_KEY");
 const RPC_URL = Deno.env.get("RPC_URL");
@@ -166,6 +170,13 @@ export const fulfill = async (c: Context) => {
     await saveOrder(key, { signature }, "fulfillment_created" as OrderStatus);
 
     const latest = (await blob.getJSON<Record<string, unknown>>(key)) ?? {};
+
+    await sendFulfillmentStartedEmail({
+      orderId,
+      email: order.email as string,
+      status: "fulfillment_created",
+      signature,
+    });
     return successResponse({
       crossmintOrderId: cmId,
       signature,
@@ -180,10 +191,14 @@ export const fulfill = async (c: Context) => {
     const message = error?.transactionMessage ?? error?.message ?? String(e);
     const logs = error?.transactionLogs;
     await saveOrder(key, { fulfillError: message, logs }, "fulfillment_error");
-    return errorResponse(
-      "transaction_failed",
-      502,
-      message.slice(0, 200)
-    );
+
+    await sendOrderFailedEmail({
+      orderId,
+      email: order.email as string,
+      status: "fulfillment_error",
+      errorMessage: message,
+    });
+
+    return errorResponse("transaction_failed", 502, message.slice(0, 200));
   }
 };

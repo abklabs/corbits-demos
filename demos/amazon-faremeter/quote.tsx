@@ -1,6 +1,7 @@
 import { Context } from "npm:hono@3";
 import { blob } from "https://esm.town/v/std/blob";
 import { errorResponse, successResponse, usdToUsdc } from "./utils.tsx";
+import { sendOrderCreatedEmail } from "./emails.tsx";
 
 const AMAZON_PRICE = Deno.env.get("AMAZON_PRICE");
 const CROSSMINT_API_KEY = Deno.env.get("CROSSMINT_API_KEY");
@@ -64,7 +65,7 @@ export const quote = async (c: Context) => {
   const orderId = existingOrderId ?? crypto.randomUUID();
   const crossmintId = cm.id ?? cm.order?.orderId ?? null;
 
-  const existingOrder = existingOrderId 
+  const existingOrder = existingOrderId
     ? await blob.getJSON<Record<string, unknown>>(`order:${existingOrderId}`)
     : null;
 
@@ -84,6 +85,15 @@ export const quote = async (c: Context) => {
   // used by fulfillment webhook
   if (crossmintId) {
     await blob.setJSON(`xmint:${crossmintId}`, { orderId });
+  }
+
+  if (!existingOrderId) {
+    await sendOrderCreatedEmail({
+      orderId,
+      email,
+      priceUsd: usd,
+      status: "created",
+    });
   }
 
   return successResponse({

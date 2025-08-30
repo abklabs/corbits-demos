@@ -4,6 +4,7 @@ import { TEST_CONFIG } from "./env.js";
 export { TEST_CONFIG };
 export const PORT = parseInt(TEST_CONFIG.SERVER_PORT);
 export const SERVER_URL = `http://localhost:${PORT}/mcp/free`;
+export const PREMIUM_URL = `http://localhost:${PORT}/mcp/premium`;
 
 const TEST_ENV = {
   ...process.env,

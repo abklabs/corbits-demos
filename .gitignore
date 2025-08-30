@@ -1,5 +1,8 @@
 *~
 *\#*
+*.swp
+*.swo
+*.swn
 dist
 git-*
 node_modules

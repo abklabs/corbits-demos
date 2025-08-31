@@ -22,6 +22,7 @@ for (const key of required) {
 
 export const TEST_CONFIG = {
   SERVER_PORT: process.env.SERVER_PORT ?? "3333",
+  PROXY_PORT: process.env.PROXY_PORT ?? "8402",
   HOST_ORIGIN: process.env.HOST_ORIGIN,
   FAREMETER_FACILITATOR_URL: process.env.FAREMETER_FACILITATOR_URL as string,
   FAREMETER_NETWORK: process.env.FAREMETER_NETWORK as string,

@@ -2,36 +2,25 @@ import tap from "tap";
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import type { CallToolResult } from "@modelcontextprotocol/sdk/types.js";
 import { ClientTransport } from "../src/client-transport.js";
-import {
-  startTestServer,
-  stopTestServer,
-  SERVER_URL,
-  TEST_CONFIG,
-} from "./server-utils.js";
+import { startTestServer, SERVER_URL, TEST_CONFIG } from "./server-utils.js";
 
 let client: Client | undefined;
 let transport: ClientTransport | undefined;
+let server: { kill: () => void } | undefined;
 
 tap.before(async () => {
-  await startTestServer();
+  server = await startTestServer();
 });
 
 tap.teardown(async () => {
-  if (client) {
-    await client.close();
-    client = undefined;
-  }
-  if (transport) {
-    await transport.close();
-    transport = undefined;
-  }
-  await stopTestServer();
+  server?.kill();
 });
 
 tap.test("MCP HTTP Client Tests", async (t) => {
   const exampleAddress = TEST_CONFIG.PAYTO_ADDRESS;
 
   t.before(async () => {
+    console.log("Setting up MCP client...");
     transport = new ClientTransport(new URL(SERVER_URL));
     client = new Client(
       { name: "test-client", version: "1.0.0" },
@@ -42,6 +31,7 @@ tap.test("MCP HTTP Client Tests", async (t) => {
   });
 
   t.after(async () => {
+    console.log("Tearing down test environment...");
     if (client) {
       await client.close();
       client = undefined;
@@ -53,6 +43,7 @@ tap.test("MCP HTTP Client Tests", async (t) => {
   });
 
   t.test("Connection", async (t) => {
+    console.log("Connecting to MCP server...");
     t.ok(transport?.sessionId, "Should have a session ID after connecting");
     t.match(
       transport?.sessionId || "",
@@ -62,6 +53,7 @@ tap.test("MCP HTTP Client Tests", async (t) => {
   });
 
   t.test("List tools", async (t) => {
+    console.log("Listing tools...");
     t.ok(client, "Client should be connected");
     if (!client) throw new Error("Client not connected");
     const tools = await client.listTools();

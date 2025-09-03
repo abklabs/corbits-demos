@@ -6,9 +6,7 @@ import { createPaymentHandler } from "@faremeter/x-solana-settlement";
 import { PublicKey } from "@solana/web3.js";
 import {
   startTestServer,
-  stopTestServer,
   startTestProxy,
-  stopTestProxy,
   PROXY_FREE_URL,
   PROXY_PREMIUM_URL,
   TEST_CONFIG,
@@ -21,10 +19,12 @@ let freeClient: Client | undefined;
 let premiumClient: Client | undefined;
 let freeTransport: ClientTransport | undefined;
 let premiumTransport: ClientTransport | undefined;
+let server: { kill: () => void } | undefined;
+let proxy: { kill: () => void } | undefined;
 
 tap.before(async () => {
-  await startTestServer();
-  await startTestProxy();
+  server = await startTestServer();
+  proxy = await startTestProxy();
 });
 
 tap.teardown(async () => {
@@ -44,8 +44,8 @@ tap.teardown(async () => {
     await premiumTransport.close();
     premiumTransport = undefined;
   }
-  await stopTestProxy();
-  await stopTestServer();
+  proxy?.kill();
+  server?.kill();
 });
 
 tap.test("Payment Proxy Tests", async (t) => {

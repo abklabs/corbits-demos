@@ -3,12 +3,7 @@ import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import type { TextContent } from "@modelcontextprotocol/sdk/types.js";
 import { Connection, PublicKey } from "@solana/web3.js";
 import { createPaymentHandler } from "@faremeter/x-solana-settlement";
-import {
-  startTestServer,
-  stopTestServer,
-  PREMIUM_URL,
-  TEST_CONFIG,
-} from "./server-utils.js";
+import { startTestServer, PREMIUM_URL, TEST_CONFIG } from "./server-utils.js";
 import { ClientTransport } from "../src/client-transport.js";
 import { loadKeypair, createWallet } from "../src/utils.js";
 
@@ -16,9 +11,10 @@ const USDC_DEV_MINT = new PublicKey(TEST_CONFIG.ASSET_ADDRESS);
 let client: Client | undefined;
 let premiumClient: Client | undefined;
 let transport: ClientTransport | undefined;
+let server: { kill: () => void } | undefined;
 
 tap.before(async () => {
-  await startTestServer();
+  server = await startTestServer();
 });
 
 tap.teardown(async () => {
@@ -34,7 +30,7 @@ tap.teardown(async () => {
     await transport.close();
     transport = undefined;
   }
-  await stopTestServer();
+  server?.kill();
 });
 
 tap.test("MCP Premium Endpoints with x402 Payment", async (t) => {

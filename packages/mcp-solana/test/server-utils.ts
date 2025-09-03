@@ -1,9 +1,17 @@
-import { spawn, ChildProcess, execSync } from "child_process";
+import { $ } from "zx/core";
+import { sleep } from "zx";
 import { TEST_CONFIG } from "./env.js";
 
+$.verbose = true;
+
 export { TEST_CONFIG };
-export const PORT = parseInt(TEST_CONFIG.SERVER_PORT);
-export const PROXY_PORT = parseInt(TEST_CONFIG.PROXY_PORT);
+
+const BASE_PORT = parseInt(TEST_CONFIG.SERVER_PORT);
+const BASE_PROXY_PORT = parseInt(TEST_CONFIG.PROXY_PORT);
+const CHILD_ID = parseInt(process.env.TAP_CHILD_ID || "0");
+
+export const PORT = BASE_PORT + CHILD_ID;
+export const PROXY_PORT = BASE_PROXY_PORT + CHILD_ID;
 export const SERVER_URL = `http://localhost:${PORT}/mcp/free`;
 export const PREMIUM_URL = `http://localhost:${PORT}/mcp/premium`;
 export const PROXY_FREE_URL = `http://localhost:${PROXY_PORT}/mcp/free`;
@@ -12,74 +20,34 @@ export const PROXY_PREMIUM_URL = `http://localhost:${PROXY_PORT}/mcp/premium`;
 const TEST_ENV = {
   ...process.env,
   ...TEST_CONFIG,
+  SERVER_PORT: PORT.toString(),
+  HOST_ORIGIN: `http://localhost:${PORT}`,
 };
 
-let server: ChildProcess | undefined;
-let proxy: ChildProcess | undefined;
+export async function startTestServer() {
 
-export async function startTestServer(): Promise<ChildProcess> {
-  try {
-    const pid = execSync(`lsof -ti:${PORT}`, { encoding: "utf-8" }).trim();
-    if (pid) {
-      console.error(
-        `\nError: Port ${PORT} is already in use by process ${pid}`,
-      );
-      console.error(`Please kill the process using: kill -9 ${pid}`);
-      process.exit(1);
-    }
-  } catch {
-    // Port is free
+  const server = $({ env: TEST_ENV })`pnpm tsx src/http-server.ts`;
+
+  await sleep(2000);
+
+  if (server.stage !== "running") {
+    throw new Error(`Server process is not running! Stage: ${server.stage}`);
   }
+  console.log(`Server process is running with PID: ${server.pid}`);
 
-  server = spawn("pnpm", ["tsx", "src/http-server.ts"], {
-    stdio: ["ignore", "pipe", "pipe"],
-    detached: true,
-    env: TEST_ENV,
-  });
-
-  await new Promise<void>((resolve, reject) => {
-    const timeout = setTimeout(() => {
-      reject(new Error("Server failed to start within 5 seconds"));
-    }, 5000);
-
-    server?.stdout?.on("data", (data) => {
-      if (
-        data.toString().includes(`HTTP MCP server running on ${SERVER_URL}`)
-      ) {
-        clearTimeout(timeout);
-        resolve();
+  return {
+    kill: () => {
+      try {
+        console.log("Stopping test server...");
+        void server.nothrow(true).kill("SIGTERM");
+      } catch {
+        // Ignore errors when killing
       }
-    });
-
-    server?.stderr?.on("data", (data) => {
-      console.error(data.toString());
-    });
-
-    server?.on("error", (err) => {
-      clearTimeout(timeout);
-      reject(err);
-    });
-  });
-
-  await new Promise((resolve) => setTimeout(resolve, 500));
-  return server;
+    },
+  };
 }
 
-export async function startTestProxy(): Promise<ChildProcess> {
-  try {
-    const pid = execSync(`lsof -ti:${PROXY_PORT}`, {
-      encoding: "utf-8",
-    }).trim();
-    if (pid) {
-      console.error(
-        `\nError: Port ${PROXY_PORT} is already in use by process ${pid}`,
-      );
-      console.error(`Please kill the process using: kill -9 ${pid}`);
-      process.exit(1);
-    }
-  } catch {
-    // Port is free
-  }
+export async function startTestProxy() {
 
   const proxyEnv = {
     ...process.env,
@@ -88,72 +56,24 @@ export async function startTestProxy(): Promise<ChildProcess> {
     MCP_SERVER_URL: `http://localhost:${PORT}`,
   };
 
-  proxy = spawn("pnpm", ["tsx", "src/payment-proxy.ts"], {
-    stdio: ["ignore", "pipe", "pipe"],
-    detached: true,
-    env: proxyEnv,
-  });
+  const proxy = $({ env: proxyEnv })`pnpm tsx src/payment-proxy.ts`;
 
-  await new Promise<void>((resolve, reject) => {
-    const timeout = setTimeout(() => {
-      reject(new Error("Proxy failed to start within 5 seconds"));
-    }, 5000);
+  await sleep(2000);
 
-    proxy?.stdout?.on("data", (data) => {
-      if (data.toString().includes(`Payment proxy running on`)) {
-        clearTimeout(timeout);
-        resolve();
-      }
-    });
-
-    proxy?.stderr?.on("data", (data) => {
-      console.error("Proxy stderr:", data.toString());
-    });
-
-    proxy?.on("error", (err) => {
-      clearTimeout(timeout);
-      reject(err);
-    });
-  });
-
-  await new Promise((resolve) => setTimeout(resolve, 500));
-  return proxy;
-}
-
-export async function stopTestServer(): Promise<void> {
-  if (server && server.pid) {
-    try {
-      process.kill(-server.pid, "SIGTERM");
-    } catch {
-      server.kill("SIGTERM");
-    }
-    await new Promise((resolve) => setTimeout(resolve, 100));
-    if (server && server.pid) {
-      try {
-        process.kill(-server.pid, "SIGKILL");
-      } catch {
-        server.kill("SIGKILL");
-      }
-    }
-    server = undefined;
+  if (proxy.stage !== "running") {
+    throw new Error(`Proxy process is not running! Stage: ${proxy.stage}`);
   }
-}
+  console.log(`Proxy process is running with PID: ${proxy.pid}`);
 
-export async function stopTestProxy(): Promise<void> {
-  if (proxy && proxy.pid) {
-    try {
-      process.kill(-proxy.pid, "SIGTERM");
-    } catch {
-      proxy.kill("SIGTERM");
-    }
-    await new Promise((resolve) => setTimeout(resolve, 100));
-    if (!proxy.killed) {
+  return {
+    kill: () => {
+      console.log("Stopping test proxy...");
+
       try {
-        process.kill(-proxy.pid, "SIGKILL");
+        void proxy.nothrow(true).kill("SIGTERM");
       } catch {
-        proxy.kill("SIGKILL");
+        // Ignore errors when killing
       }
-    }
-    proxy = undefined;
-  }
+    },
+  };
 }

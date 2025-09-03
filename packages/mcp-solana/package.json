@@ -24,7 +24,8 @@
     "tsx": "^4.20.5",
     "typescript": "^5.9.2",
     "typescript-eslint": "^8.41.0",
-    "typescript-language-server": "^4.4.0"
+    "typescript-language-server": "^4.4.0",
+    "zx": "^8.8.1"
   },
   "dependencies": {
     "@faremeter/fetch": "^0.3.0",

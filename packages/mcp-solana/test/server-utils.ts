@@ -22,6 +22,7 @@ const TEST_ENV = {
   ...TEST_CONFIG,
   SERVER_PORT: PORT.toString(),
   HOST_ORIGIN: `http://localhost:${PORT}`,
+  ENABLE_TEST_ENDPOINTS: 'true',
 };
 
 export async function startTestServer() {
@@ -54,6 +55,7 @@ export async function startTestProxy() {
     ...TEST_ENV,
     PROXY_PORT: PROXY_PORT.toString(),
     MCP_SERVER_URL: `http://localhost:${PORT}`,
+    ENABLE_TEST_ENDPOINTS: 'true',
   };
 
   const proxy = $({ env: proxyEnv })`pnpm tsx src/payment-proxy.ts`;

@@ -82,22 +82,57 @@ async function proxyRequest(
     handlers: [paymentHandler],
   });
 
-  const fetchFn = handlePayment ? x402Fetch : fetch;
-  const response = await fetchFn(targetUrl, fetchOptions);
+  try {
+    const fetchFn = handlePayment ? x402Fetch : fetch;
+    const response = await fetchFn(targetUrl, fetchOptions);
 
-  res.status(response.status);
-  response.headers.forEach((value, key) => {
-    if (
-      key !== "content-encoding" &&
-      key !== "transfer-encoding" &&
-      key !== "content-length"
-    ) {
-      res.setHeader(key, value);
+    res.status(response.status);
+    response.headers.forEach((value, key) => {
+      if (
+        key !== "content-encoding" &&
+        key !== "transfer-encoding" &&
+        key !== "content-length"
+      ) {
+        res.setHeader(key, value);
+      }
+    });
+
+    const contentType = response.headers.get("content-type");
+    if (contentType && contentType.includes("text/event-stream")) {
+      if (response.body) {
+        const reader = response.body.getReader();
+        const decoder = new TextDecoder();
+
+        req.on('close', () => {
+          reader.cancel().catch(() => {});
+        });
+
+        try {
+          while (true) {
+            const { done, value } = await reader.read();
+            if (done) break;
+            res.write(decoder.decode(value, { stream: true }));
+          }
+        } catch (err: any) {
+          if (err.message !== 'terminated') {
+            console.error('Stream error:', err.message);
+          }
+        } finally {
+          res.end();
+        }
+      }
+    } else {
+      const responseBody = await response.text();
+      res.send(responseBody);
     }
-  });
-
-  const responseBody = await response.text();
-  res.send(responseBody);
+  } catch (err: any) {
+    if (!err.message.includes('terminated')) {
+      console.error('Proxy error:', err.message);
+      if (!res.headersSent) {
+        res.status(502).json({ error: 'Proxy error' });
+      }
+    }
+  }
 }
 
 app.all("/mcp/premium", async (req, res) => {
@@ -107,6 +142,12 @@ app.all("/mcp/premium", async (req, res) => {
 app.all("/mcp/free", async (req, res) => {
   await proxyRequest(req, res, "/mcp/free", false);
 });
+
+if (process.env.ENABLE_TEST_ENDPOINTS === 'true') {
+  app.get("/test/stream", async (req, res) => {
+    await proxyRequest(req, res, "/test/stream", false);
+  });
+}
 
 const PORT = process.env.PROXY_PORT ? parseInt(process.env.PROXY_PORT) : 8402;
 const server = app.listen(PORT, () => {

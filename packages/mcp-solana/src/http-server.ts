@@ -376,9 +376,13 @@ app.get("/mcp/premium", handlePremiumSessionRequest);
 app.delete("/mcp/premium", handlePremiumSessionRequest);
 
 const server = app.listen(config.SERVER_PORT, () => {
-  console.log(`MCP server running on http://localhost:${config.SERVER_PORT}`);
+  console.log(
+    `MCP server running on http://localhost:${config.SERVER_PORT} (${config.NETWORK})`,
+  );
   console.log(`  Free: http://localhost:${config.SERVER_PORT}/mcp/free`);
   console.log(`  Premium: http://localhost:${config.SERVER_PORT}/mcp/premium`);
+  console.log(`  RPC: ${config.SOLANA_RPC_URL}`);
+  console.log(`  Facilitator: ${config.FAREMETER_FACILITATOR_URL}`);
 });
 
 function shutdown() {

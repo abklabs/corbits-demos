@@ -3,29 +3,14 @@ import { PublicKey } from "@solana/web3.js";
 import { createPaymentHandler } from "@faremeter/x-solana-settlement";
 import { wrap } from "@faremeter/fetch";
 import { loadKeypair, createWallet } from "./utils.js";
-import dotenv from "dotenv";
+import { config } from "./config.js";
 
-dotenv.config();
-
-const PAYER_KEYPAIR_PATH = process.env.PAYER_KEYPAIR_PATH;
-const MCP_SERVER_URL = process.env.MCP_SERVER_URL;
-const NETWORK = process.env.FAREMETER_NETWORK;
-const ASSET_ADDRESS = process.env.ASSET_ADDRESS;
-
-if (!PAYER_KEYPAIR_PATH) {
+if (!config.PAYER_KEYPAIR_PATH) {
   console.error("Missing PAYER_KEYPAIR_PATH environment variable");
   process.exit(1);
 }
-if (!MCP_SERVER_URL) {
+if (!config.MCP_SERVER_URL) {
   console.error("Missing MCP_SERVER_URL environment variable");
-  process.exit(1);
-}
-if (!NETWORK) {
-  console.error("Missing FAREMETER_NETWORK environment variable");
-  process.exit(1);
-}
-if (!ASSET_ADDRESS) {
-  console.error("Missing ASSET_ADDRESS environment variable");
   process.exit(1);
 }
 
@@ -33,9 +18,12 @@ const app = express();
 app.use(express.json());
 app.use(express.text({ type: "text/event-stream" }));
 
-const keypair = loadKeypair(PAYER_KEYPAIR_PATH);
-const assetMint = new PublicKey(ASSET_ADDRESS);
-const wallet = createWallet(keypair, NETWORK as "devnet" | "mainnet-beta");
+const keypair = loadKeypair(config.PAYER_KEYPAIR_PATH);
+const assetMint = new PublicKey(config.ASSET_ADDRESS);
+const wallet = createWallet(
+  keypair,
+  config.FAREMETER_NETWORK as "devnet" | "mainnet-beta",
+);
 const paymentHandler = createPaymentHandler(wallet, assetMint);
 
 async function proxyRequest(
@@ -44,8 +32,8 @@ async function proxyRequest(
   path: string,
   handlePayment = false,
 ) {
-  const targetUrl = `${MCP_SERVER_URL}${path}`;
-  const targetHost = new URL(MCP_SERVER_URL as string).host;
+  const targetUrl = `${config.MCP_SERVER_URL}${path}`;
+  const targetHost = new URL(config.MCP_SERVER_URL as string).host;
 
   const headers: Record<string, string> = {};
   for (const [key, value] of Object.entries(req.headers)) {
@@ -108,7 +96,7 @@ app.all("/mcp/free", async (req, res) => {
   await proxyRequest(req, res, "/mcp/free", false);
 });
 
-const PORT = process.env.PROXY_PORT ? parseInt(process.env.PROXY_PORT) : 8402;
+const PORT = config.PROXY_PORT;
 const server = app.listen(PORT, () => {
   console.log(`Payment proxy running on http://localhost:${PORT}`);
   console.log(`  Free: http://localhost:${PORT}/mcp/free`);

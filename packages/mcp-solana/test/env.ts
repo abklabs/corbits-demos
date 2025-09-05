@@ -1,6 +1,4 @@
-import dotenv from "dotenv";
-
-dotenv.config();
+import { config } from "../src/config.js";
 
 const required = [
   "FAREMETER_FACILITATOR_URL",
@@ -14,22 +12,29 @@ const required = [
 ];
 
 for (const key of required) {
-  if (!process.env[key]) {
+  if (!config[key as keyof typeof config]) {
     console.error(`Error: ${key} is not set in .env`);
     process.exit(1);
   }
 }
 
+if (!config.PAYTO_ADDRESS) {
+  throw new Error("PAYTO_ADDRESS is required but not set");
+}
+if (!config.PAYER_KEYPAIR_PATH) {
+  throw new Error("PAYER_KEYPAIR_PATH is required but not set");
+}
+
 export const TEST_CONFIG = {
-  SERVER_PORT: process.env.SERVER_PORT ?? "3333",
-  PROXY_PORT: process.env.PROXY_PORT ?? "8402",
-  HOST_ORIGIN: process.env.HOST_ORIGIN,
-  FAREMETER_FACILITATOR_URL: process.env.FAREMETER_FACILITATOR_URL as string,
-  FAREMETER_NETWORK: process.env.FAREMETER_NETWORK as string,
-  PAYTO_ADDRESS: process.env.PAYTO_ADDRESS as string,
-  ASSET_ADDRESS: process.env.ASSET_ADDRESS as string,
-  PAYER_KEYPAIR_PATH: process.env.PAYER_KEYPAIR_PATH as string,
-  PRICE_USDC: process.env.PRICE_USDC as string,
-  SOLANA_RPC_URL: process.env.SOLANA_RPC_URL as string,
-  COMMITMENT: process.env.COMMITMENT as string,
+  SERVER_PORT: String(config.SERVER_PORT),
+  PROXY_PORT: String(config.PROXY_PORT),
+  HOST_ORIGIN: config.HOST_ORIGIN,
+  FAREMETER_FACILITATOR_URL: config.FAREMETER_FACILITATOR_URL,
+  FAREMETER_NETWORK: config.FAREMETER_NETWORK,
+  PAYTO_ADDRESS: config.PAYTO_ADDRESS,
+  ASSET_ADDRESS: config.ASSET_ADDRESS,
+  PAYER_KEYPAIR_PATH: config.PAYER_KEYPAIR_PATH,
+  PRICE_USDC: config.PRICE_USDC,
+  SOLANA_RPC_URL: config.SOLANA_RPC_URL,
+  COMMITMENT: config.COMMITMENT,
 };

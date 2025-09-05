@@ -1,18 +1,12 @@
-import { Connection, clusterApiUrl } from "@solana/web3.js";
+import { Connection } from "@solana/web3.js";
 import type { Commitment } from "@solana/web3.js";
-import dotenv from "dotenv";
-
-dotenv.config();
-
-const SOLANA_RPC_URL = process.env.SOLANA_RPC_URL ?? clusterApiUrl("devnet");
-const COMMITMENT = (process.env.COMMITMENT as Commitment) ?? "confirmed";
-const SOLANA_RPC_HEADER = process.env.SOLANA_RPC_HEADER;
+import { config } from "./config.js";
 
 export function makeConnection(
-  url = SOLANA_RPC_URL,
-  commitment: Commitment = COMMITMENT,
+  url = config.SOLANA_RPC_URL,
+  commitment: Commitment = config.COMMITMENT as Commitment,
 ) {
-  const headerString = SOLANA_RPC_HEADER;
+  const headerString = config.SOLANA_RPC_HEADER;
   if (!headerString) {
     return new Connection(url, commitment);
   }

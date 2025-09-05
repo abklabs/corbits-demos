@@ -22,44 +22,7 @@ import {
   getTokenAccountsByOwnerSchema,
   getProgramAccountsSchema,
 } from "./schemas.js";
-import dotenv from "dotenv";
-
-dotenv.config();
-
-const SERVER_PORT = process.env.SERVER_PORT
-  ? parseInt(process.env.SERVER_PORT)
-  : 3333;
-const FACILITATOR_URL = process.env.FAREMETER_FACILITATOR_URL;
-const NETWORK = process.env.FAREMETER_NETWORK;
-const PAYTO_ADDRESS = process.env.PAYTO_ADDRESS;
-const ASSET_ADDRESS = process.env.ASSET_ADDRESS;
-const HOST_ORIGIN = process.env.HOST_ORIGIN;
-const PRICE_USDC = process.env.PRICE_USDC;
-
-if (!FACILITATOR_URL) {
-  console.error("Missing FAREMETER_FACILITATOR_URL environment variable");
-  process.exit(1);
-}
-if (!NETWORK) {
-  console.error("Missing FAREMETER_NETWORK environment variable");
-  process.exit(1);
-}
-if (!PAYTO_ADDRESS) {
-  console.error("Missing PAYTO_ADDRESS environment variable");
-  process.exit(1);
-}
-if (!ASSET_ADDRESS) {
-  console.error("Missing ASSET_ADDRESS environment variable");
-  process.exit(1);
-}
-if (!HOST_ORIGIN) {
-  console.error("Missing HOST_ORIGIN environment variable");
-  process.exit(1);
-}
-if (!PRICE_USDC) {
-  console.error("Missing PRICE_USDC environment variable");
-  process.exit(1);
-}
+import { config } from "./config.js";
 
 const app = express();
 app.use(express.json());
@@ -67,16 +30,21 @@ app.use(express.json());
 const transports = new Map<string, StreamableHTTPServerTransport>();
 const premiumTransports = new Map<string, StreamableHTTPServerTransport>();
 
+if (!config.PAYTO_ADDRESS) {
+  console.error("PAYTO_ADDRESS required for premium endpoints");
+  process.exit(1);
+}
+
 const paywalledMiddleware = await faremeter.createMiddleware({
-  facilitatorURL: FACILITATOR_URL,
+  facilitatorURL: config.FAREMETER_FACILITATOR_URL,
   accepts: [
     {
       scheme: "@faremeter/x-solana-settlement",
-      network: NETWORK,
-      payTo: PAYTO_ADDRESS,
-      asset: ASSET_ADDRESS,
-      maxAmountRequired: usdcToBaseUnits(PRICE_USDC),
-      resource: `${HOST_ORIGIN}/mcp/premium`,
+      network: config.FAREMETER_NETWORK,
+      payTo: config.PAYTO_ADDRESS,
+      asset: config.ASSET_ADDRESS,
+      maxAmountRequired: usdcToBaseUnits(config.PRICE_USDC),
+      resource: `${config.HOST_ORIGIN}/mcp/premium`,
       description: "Premium Solana RPC endpoints",
       mimeType: "application/json",
       maxTimeoutSeconds: 60,
@@ -98,7 +66,11 @@ app.post("/mcp/free", async (req, res) => {
         transports.set(sessionId, transport);
       },
       enableDnsRebindingProtection: true,
-      allowedHosts: ["127.0.0.1", "localhost", `localhost:${SERVER_PORT}`],
+      allowedHosts: [
+        "127.0.0.1",
+        "localhost",
+        `localhost:${config.SERVER_PORT}`,
+      ],
     });
 
     transport.onclose = () => {
@@ -215,7 +187,11 @@ app.post("/mcp/premium", paywalledMiddleware, async (req, res) => {
         premiumTransports.set(sessionId, transport);
       },
       enableDnsRebindingProtection: true,
-      allowedHosts: ["127.0.0.1", "localhost", `localhost:${SERVER_PORT}`],
+      allowedHosts: [
+        "127.0.0.1",
+        "localhost",
+        `localhost:${config.SERVER_PORT}`,
+      ],
     });
 
     transport.onclose = () => {
@@ -370,11 +346,10 @@ const handlePremiumSessionRequest = async (
 app.get("/mcp/premium", handlePremiumSessionRequest);
 app.delete("/mcp/premium", handlePremiumSessionRequest);
 
-const server = app.listen(SERVER_PORT, () => {
-  console.log(
-    `HTTP MCP server running on http://localhost:${SERVER_PORT}/mcp/free`,
-    `Premium MCP endpoint at http://localhost:${SERVER_PORT}/mcp/premium`,
-  );
+const server = app.listen(config.SERVER_PORT, () => {
+  console.log(`MCP server running on http://localhost:${config.SERVER_PORT}`);
+  console.log(`  Free: http://localhost:${config.SERVER_PORT}/mcp/free`);
+  console.log(`  Premium: http://localhost:${config.SERVER_PORT}/mcp/premium`);
 });
 
 function shutdown() {

@@ -77,41 +77,51 @@ Make sure to:
 
 ## Environment Variables
 
-Create `.env` file:
-
-### Shared Configuration
+Copy `.env.example` to `.env` and configure:
 
 ```env
-# Network and assets
-FAREMETER_FACILITATOR_URL=https://facilitator.dev.faremeter.xyz
-FAREMETER_NETWORK=devnet
-ASSET_ADDRESS=4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU  # USDC-Dev on devnet
+# Set to "mainnet" or "devnet"
+NETWORK=devnet
 
-# Server configuration
-SERVER_PORT=3333
-HOST_ORIGIN=http://localhost:<SERVER_PORT>
-```
-
-### Server-specific
-
-```env
-# Required for premium endpoints
-PAYTO_ADDRESS=<your-wallet-address>
+# Payment configuration
+PAYTO_ADDRESS=<your-wallet-address>  # Receives payments
 PRICE_USDC=0.01
+PAYER_KEYPAIR_PATH=./client-wallet.json  # Makes payments
+FAREMETER_FACILITATOR_URL=https://facilitator.dev.faremeter.xyz # Should be set to the facilitator URL for your network
 
-# Solana RPC
-SOLANA_RPC_URL=https://api.devnet.solana.com
-SOLANA_RPC_HEADER=x-api-key: your-key-here       # For authenticated RPC endpoints (Optional, leave blank)
+# Server configuration (optional)
+SERVER_PORT=3333
+PROXY_PORT=8402
+HOST_ORIGIN=http://localhost:3333
+MCP_SERVER_URL=http://localhost:3333
+
+# Advanced configuration (optional - defaults are set based on NETWORK)
+# SOLANA_RPC_URL=https://api.devnet.solana.com
+# SOLANA_RPC_HEADER=x-api-key: your-key-here  # For authenticated RPC
+# ASSET_ADDRESS=4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU  # USDC mint
 COMMITMENT=confirmed
 ```
 
-### Proxy-specific
+### Running on Mainnet
+
+To run on mainnet, change the NETWORK variable and Faremeter URL:
 
 ```env
-PAYER_KEYPAIR_PATH=path/to/keypair.json
-MCP_SERVER_URL=http://localhost:<SERVER_PORT>
-PROXY_PORT=8402
+NETWORK=mainnet
+PAYTO_ADDRESS=<your-mainnet-wallet-address>
+FAREMETER_FACILITATOR_URL=https://facilitator.faremeter.xyz
 ```
+
+The following will be automatically configured for mainnet:
+
+- RPC URL: `https://api.mainnet-beta.solana.com`
+- USDC Address: `EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v`
+
+**Important for Mainnet:**
+
+- Use a mainnet-funded wallet in `PAYER_KEYPAIR_PATH`
+- Ensure your `PAYTO_ADDRESS` is a mainnet wallet
+- Fund with real SOL and USDC (not test tokens)
 
 ## Run Server
 

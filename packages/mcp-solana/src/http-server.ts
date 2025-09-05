@@ -39,7 +39,7 @@ const paywalledMiddleware = await faremeter.createMiddleware({
   facilitatorURL: config.FAREMETER_FACILITATOR_URL,
   accepts: [
     {
-      scheme: "@faremeter/x-solana-settlement",
+      scheme: config.FAREMETER_SCHEME,
       network: config.FAREMETER_NETWORK,
       payTo: config.PAYTO_ADDRESS,
       asset: config.ASSET_ADDRESS,

@@ -1,7 +1,9 @@
 import express from "express";
-import { PublicKey } from "@solana/web3.js";
-import { createPaymentHandler } from "@faremeter/x-solana-settlement";
+import { PublicKey, Connection } from "@solana/web3.js";
+import { createPaymentHandler as createXSolanaHandler } from "@faremeter/x-solana-settlement";
+import { createPaymentHandler as createExactHandler } from "@faremeter/payment-solana-exact";
 import { wrap } from "@faremeter/fetch";
+import type { PaymentHandler } from "@faremeter/types";
 import { loadKeypair, createWallet } from "./utils.js";
 import { config } from "./config.js";
 
@@ -24,7 +26,17 @@ const wallet = createWallet(
   keypair,
   config.FAREMETER_NETWORK as "devnet" | "mainnet-beta",
 );
-const paymentHandler = createPaymentHandler(wallet, assetMint);
+
+let paymentHandler: PaymentHandler;
+if (config.FAREMETER_SCHEME === "exact") {
+  const connection = new Connection(config.SOLANA_RPC_URL, config.COMMITMENT);
+  paymentHandler = createExactHandler(wallet, assetMint, connection);
+} else if (config.FAREMETER_SCHEME === "@faremeter/x-solana-settlement") {
+  paymentHandler = createXSolanaHandler(wallet, assetMint);
+} else {
+  console.error(`Unsupported payment scheme: ${config.FAREMETER_SCHEME}`);
+  process.exit(1);
+}
 
 async function proxyRequest(
   req: express.Request,

@@ -86,7 +86,7 @@ tap.test("MCP Premium Endpoints with x402 Payment", async (t) => {
     }
     t.equal(
       acceptOption.scheme,
-      "@faremeter/x-solana-settlement",
+      TEST_CONFIG.FAREMETER_SCHEME,
       "Should require Solana payment",
     );
     t.equal(acceptOption.network, "devnet", "Should be on devnet");

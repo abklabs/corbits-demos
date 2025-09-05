@@ -370,6 +370,45 @@ const handlePremiumSessionRequest = async (
 app.get("/mcp/premium", handlePremiumSessionRequest);
 app.delete("/mcp/premium", handlePremiumSessionRequest);
 
+if (process.env.ENABLE_TEST_ENDPOINTS === 'true') {
+  app.get("/test/stream", (req, res) => {
+    res.writeHead(200, {
+      'Content-Type': 'text/event-stream',
+      'Cache-Control': 'no-cache',
+      'Connection': 'keep-alive',
+      'Access-Control-Allow-Origin': '*'
+    });
+
+    let counter = 0;
+    const sendEvent = () => {
+      counter++;
+      const data = {
+        id: counter,
+        timestamp: new Date().toISOString(),
+        message: `Event ${counter}`
+      };
+      res.write(`data: ${JSON.stringify(data)}\n\n`);
+
+      if (counter >= 5) {
+        res.write('event: close\ndata: Stream complete\n\n');
+        res.end();
+        return;
+      }
+    };
+
+    sendEvent();
+
+    const interval = setInterval(() => {
+      sendEvent();
+    }, 500);
+
+    req.on('close', () => {
+      clearInterval(interval);
+      res.end();
+    });
+  });
+}
+
 const server = app.listen(SERVER_PORT, () => {
   console.log(
     `HTTP MCP server running on http://localhost:${SERVER_PORT}/mcp/free`,

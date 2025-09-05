@@ -1,6 +1,6 @@
 all: lint build test
 
-build: packages/types $(wildcard packages/*) scripts $(wildcard demos/*)
+build: packages/types $(wildcard packages/*) scripts
 
 lint:
 	pnpm prettier -c .
@@ -13,9 +13,6 @@ format:
 
 packages/%: FORCE
 	cd $@ && rm -rf dist && pnpm tsc && pnpm tsc-esm-fix
-
-demos/%: FORCE
-	cd $@ && rm -rf dist && pnpm tsc
 
 scripts: FORCE
 	cd scripts && rm -rf dist && pnpm tsc

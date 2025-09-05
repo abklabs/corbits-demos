@@ -6,7 +6,7 @@ dotenv.config();
 const Network = type("'mainnet' | 'devnet'");
 const Commitment = type("'finalized' | 'confirmed' | 'processed'");
 const FaremeterNetwork = type("'solana-mainnet' | 'solana-devnet'");
-const FaremeterScheme = type("@faremeter/x-solana-settlement");
+const FaremeterScheme = type("'exact' | '@faremeter/x-solana-settlement'");
 const Port = type("1 <= number.integer <= 65535");
 const UsdcAmount = type("string.numeric");
 const SolanaAddress = type("/^[1-9A-HJ-NP-Za-km-z]{32,44}$/");
@@ -69,7 +69,7 @@ function buildConfig() {
       process.env.FAREMETER_FACILITATOR_URL ??
       "https://facilitator.dev.faremeter.xyz",
     FAREMETER_NETWORK: defaults.faremeterNetwork,
-    FAREMETER_SCHEME: process.env.FAREMETER_SCHEME,
+    FAREMETER_SCHEME: process.env.FAREMETER_SCHEME ?? "exact",
     ASSET_ADDRESS: process.env.ASSET_ADDRESS ?? defaults.mintAddress,
     HOST_ORIGIN: process.env.HOST_ORIGIN ?? "http://localhost:3333",
     PRICE_USDC: process.env.PRICE_USDC ?? "0.01",

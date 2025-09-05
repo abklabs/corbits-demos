@@ -145,9 +145,15 @@ app.all("/mcp/free", async (req, res) => {
 
 const PORT = config.PROXY_PORT;
 const server = app.listen(PORT, () => {
-  console.log(`Payment proxy running on http://localhost:${PORT}`);
+  console.log(
+    `Payment proxy running on http://localhost:${PORT} (${config.NETWORK})`,
+  );
   console.log(`  Free: http://localhost:${PORT}/mcp/free`);
   console.log(`  Premium: http://localhost:${PORT}/mcp/premium`);
+  console.log(
+    `  Proxying to: ${config.MCP_SERVER_URL ?? `http://localhost:${config.SERVER_PORT}`}`,
+  );
+  console.log(`  Facilitator: ${config.FAREMETER_FACILITATOR_URL}`);
 });
 
 function shutdown() {

@@ -2,8 +2,9 @@ import tap from "tap";
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import type { TextContent } from "@modelcontextprotocol/sdk/types.js";
 import { ClientTransport } from "../src/client-transport.js";
-import { createPaymentHandler } from "@faremeter/x-solana-settlement";
-import { PublicKey } from "@solana/web3.js";
+import { createPaymentHandler } from "@faremeter/payment-solana-exact";
+import { Connection, PublicKey } from "@solana/web3.js";
+import type { Commitment, FaremeterNetwork } from "../src/config.js";
 import {
   startTestServer,
   startTestProxy,
@@ -79,9 +80,17 @@ tap.test("Payment Proxy Tests", async (t) => {
     const keypair = loadKeypair(TEST_CONFIG.PAYER_KEYPAIR_PATH);
     const wallet = createWallet(
       keypair,
-      TEST_CONFIG.FAREMETER_NETWORK as "devnet" | "mainnet-beta",
+      TEST_CONFIG.FAREMETER_NETWORK as FaremeterNetwork,
     );
-    const paymentHandler = createPaymentHandler(wallet, USDC_DEV_MINT);
+    const connection = new Connection(
+      TEST_CONFIG.SOLANA_RPC_URL,
+      TEST_CONFIG.COMMITMENT as Commitment,
+    );
+    const paymentHandler = createPaymentHandler(
+      wallet,
+      USDC_DEV_MINT,
+      connection,
+    );
 
     premiumTransport = new ClientTransport(new URL(PROXY_PREMIUM_URL), [
       paymentHandler,

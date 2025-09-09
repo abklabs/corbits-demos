@@ -25,7 +25,6 @@ const TEST_ENV = {
 };
 
 export async function startTestServer() {
-
   const server = $({ env: TEST_ENV })`pnpm tsx src/http-server.ts`;
 
   await sleep(2000);
@@ -48,7 +47,6 @@ export async function startTestServer() {
 }
 
 export async function startTestProxy() {
-
   const proxyEnv = {
     ...process.env,
     ...TEST_ENV,

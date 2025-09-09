@@ -2,7 +2,6 @@ import express from "express";
 import { randomUUID } from "node:crypto";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/streamableHttp.js";
-import { isInitializeRequest } from "@modelcontextprotocol/sdk/types.js";
 import {
   PublicKey,
   type Commitment,
@@ -35,22 +34,28 @@ if (!config.PAYTO_ADDRESS) {
   process.exit(1);
 }
 
-const paywalledMiddleware = await faremeter.createMiddleware({
-  facilitatorURL: config.FAREMETER_FACILITATOR_URL,
-  accepts: [
-    {
-      scheme: config.FAREMETER_SCHEME,
-      network: config.FAREMETER_NETWORK,
-      payTo: config.PAYTO_ADDRESS,
-      asset: config.ASSET_ADDRESS,
-      maxAmountRequired: usdcToBaseUnits(config.PRICE_USDC),
-      resource: `${config.HOST_ORIGIN}/mcp/premium`,
-      description: "Premium Solana RPC endpoints",
-      mimeType: "application/json",
-      maxTimeoutSeconds: 60,
-    },
-  ],
-});
+let paywalledMiddleware;
+try {
+  paywalledMiddleware = await faremeter.createMiddleware({
+    facilitatorURL: config.FAREMETER_FACILITATOR_URL,
+    accepts: [
+      {
+        scheme: config.FAREMETER_SCHEME,
+        network: config.FAREMETER_NETWORK,
+        payTo: config.PAYTO_ADDRESS,
+        asset: config.ASSET_ADDRESS,
+        maxAmountRequired: usdcToBaseUnits(config.PRICE_USDC),
+        resource: `${config.HOST_ORIGIN}/mcp/premium`,
+        description: "Premium Solana RPC endpoints",
+        mimeType: "application/json",
+        maxTimeoutSeconds: 60,
+      },
+    ],
+  });
+} catch (error) {
+  console.error("Failed to create faremeter middleware:", error);
+  throw error;
+}
 
 app.post("/mcp/free", async (req, res) => {
   const sessionId = req.headers["mcp-session-id"] as string | undefined;
@@ -59,7 +64,7 @@ app.post("/mcp/free", async (req, res) => {
   const existingTransport = sessionId ? transports.get(sessionId) : undefined;
   if (existingTransport) {
     transport = existingTransport;
-  } else if (!sessionId && isInitializeRequest(req.body)) {
+  } else if (!sessionId && req.body?.method === "initialize") {
     transport = new StreamableHTTPServerTransport({
       sessionIdGenerator: () => randomUUID(),
       onsessioninitialized: (sessionId) => {
@@ -170,165 +175,189 @@ const handleSessionRequest = async (
 app.get("/mcp/free", handleSessionRequest);
 app.delete("/mcp/free", handleSessionRequest);
 
-app.post("/mcp/premium", paywalledMiddleware, async (req, res) => {
-  const sessionId = req.headers["mcp-session-id"] as string | undefined;
+app.post(
+  "/mcp/premium",
+  (req, res, next) => {
+    // Check if this is an MCP protocol method that should bypass payment
+    const bypassMethods = [
+      "initialize",
+      "initialized",
+      "notifications/initialized",
+      "tools/list",
+      "prompts/list",
+      "resources/list",
+    ];
 
-  let transport: StreamableHTTPServerTransport;
+    if (req.body?.method && bypassMethods.includes(req.body.method)) {
+      next();
+    } else {
+      paywalledMiddleware(req, res, next);
+    }
+  },
+  async (req, res) => {
+    const sessionId = req.headers["mcp-session-id"] as string | undefined;
 
-  const existingTransport = sessionId
-    ? premiumTransports.get(sessionId)
-    : undefined;
-  if (existingTransport) {
-    transport = existingTransport;
-  } else if (!sessionId && isInitializeRequest(req.body)) {
-    transport = new StreamableHTTPServerTransport({
-      sessionIdGenerator: () => randomUUID(),
-      onsessioninitialized: (sessionId) => {
-        premiumTransports.set(sessionId, transport);
-      },
-      enableDnsRebindingProtection: true,
-      allowedHosts: [
-        "127.0.0.1",
-        "localhost",
-        `localhost:${config.SERVER_PORT}`,
-      ],
-    });
+    let transport: StreamableHTTPServerTransport;
 
-    transport.onclose = () => {
-      const sessionId = transport.sessionId;
-      if (sessionId) {
-        premiumTransports.delete(sessionId);
-      }
-    };
+    const existingTransport = sessionId
+      ? premiumTransports.get(sessionId)
+      : undefined;
+    if (existingTransport) {
+      transport = existingTransport;
+    } else if (!sessionId && req.body?.method === "initialize") {
+      transport = new StreamableHTTPServerTransport({
+        sessionIdGenerator: () => randomUUID(),
+        onsessioninitialized: (sessionId) => {
+          premiumTransports.set(sessionId, transport);
+        },
+        enableDnsRebindingProtection: true,
+        allowedHosts: [
+          "127.0.0.1",
+          "localhost",
+          `localhost:${config.SERVER_PORT}`,
+        ],
+      });
 
-    const server = new McpServer({
-      name: "solana-rpc-premium",
-      version: "0.0.1",
-    });
-
-    const conn = () => makeConnection();
-
-    server.registerTool(
-      "solana.get_transaction",
-      {
-        title: "Get transaction details (PREMIUM)",
-        description: "Get detailed information about a transaction",
-        inputSchema: getTransactionSchema,
-      },
-      async ({ signature, maxSupportedTransactionVersion, commitment }) => {
-        const options: {
-          maxSupportedTransactionVersion?: number;
-          commitment?: Finality;
-        } = {};
-        if (maxSupportedTransactionVersion !== undefined) {
-          options.maxSupportedTransactionVersion =
-            maxSupportedTransactionVersion;
+      transport.onclose = () => {
+        const sessionId = transport.sessionId;
+        if (sessionId) {
+          premiumTransports.delete(sessionId);
         }
-        if (commitment) {
-          options.commitment = commitment as Finality;
-        }
-        const tx = await withRetries(() =>
-          conn().getTransaction(signature, options),
-        );
-        return { content: [{ type: "text", text: JSON.stringify(tx) }] };
-      },
-    );
+      };
 
-    server.registerTool(
-      "solana.get_signatures_for_address",
-      {
-        title: "Get signatures for address (PREMIUM)",
-        description: "Get transaction signatures for an address",
-        inputSchema: getSignaturesForAddressSchema,
-      },
-      async ({ address, limit, before, until, commitment }) => {
-        const pk = new PublicKey(address);
-        const options: SignaturesForAddressOptions = {};
-        if (limit !== undefined) options.limit = limit;
-        if (before !== undefined) options.before = before;
-        if (until !== undefined) options.until = until;
-        const signatures = await withRetries(() =>
-          conn().getSignaturesForAddress(
-            pk,
-            options,
-            commitment ? (commitment as Finality) : undefined,
-          ),
-        );
-        return {
-          content: [{ type: "text", text: JSON.stringify(signatures) }],
-        };
-      },
-    );
+      const server = new McpServer({
+        name: "solana-rpc-premium",
+        version: "0.0.1",
+      });
 
-    server.registerTool(
-      "solana.get_token_accounts_by_owner",
-      {
-        title: "Get token accounts by owner (PREMIUM)",
-        description: "Get all token accounts owned by an address",
-        inputSchema: getTokenAccountsByOwnerSchema,
-      },
-      async ({ owner, mint, programId, commitment }) => {
-        const ownerPk = new PublicKey(owner);
+      const conn = () => makeConnection();
 
-        const filter = mint
-          ? { mint: new PublicKey(mint) }
-          : {
-              programId: new PublicKey(
-                programId || "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
-              ),
-            };
+      server.registerTool(
+        "solana.get_transaction",
+        {
+          title: "Get transaction details (PREMIUM)",
+          description: "Get detailed information about a transaction",
+          inputSchema: getTransactionSchema,
+        },
+        async ({ signature, maxSupportedTransactionVersion, commitment }) => {
+          const options: {
+            maxSupportedTransactionVersion?: number;
+            commitment?: Finality;
+          } = {};
+          if (maxSupportedTransactionVersion !== undefined) {
+            options.maxSupportedTransactionVersion =
+              maxSupportedTransactionVersion;
+          }
+          if (commitment) {
+            options.commitment = commitment as Finality;
+          }
+          const tx = await withRetries(() =>
+            conn().getTransaction(signature, options),
+          );
+          return { content: [{ type: "text", text: JSON.stringify(tx) }] };
+        },
+      );
 
-        const accounts = await withRetries(() =>
-          conn().getTokenAccountsByOwner(
-            ownerPk,
-            filter,
-            commitment ? { commitment: commitment as Commitment } : undefined,
-          ),
-        );
-        return { content: [{ type: "text", text: JSON.stringify(accounts) }] };
-      },
-    );
+      server.registerTool(
+        "solana.get_signatures_for_address",
+        {
+          title: "Get signatures for address (PREMIUM)",
+          description: "Get transaction signatures for an address",
+          inputSchema: getSignaturesForAddressSchema,
+        },
+        async ({ address, limit, before, until, commitment }) => {
+          const pk = new PublicKey(address);
+          const options: SignaturesForAddressOptions = {};
+          if (limit !== undefined) options.limit = limit;
+          if (before !== undefined) options.before = before;
+          if (until !== undefined) options.until = until;
+          const signatures = await withRetries(() =>
+            conn().getSignaturesForAddress(
+              pk,
+              options,
+              commitment ? (commitment as Finality) : undefined,
+            ),
+          );
+          return {
+            content: [{ type: "text", text: JSON.stringify(signatures) }],
+          };
+        },
+      );
 
-    server.registerTool(
-      "solana.get_program_accounts",
-      {
-        title: "Get program accounts (PREMIUM)",
-        description: "Get all accounts owned by a program",
-        inputSchema: getProgramAccountsSchema,
-      },
-      async ({ programId, dataSize, commitment }) => {
-        const pk = new PublicKey(programId);
+      server.registerTool(
+        "solana.get_token_accounts_by_owner",
+        {
+          title: "Get token accounts by owner (PREMIUM)",
+          description: "Get all token accounts owned by an address",
+          inputSchema: getTokenAccountsByOwnerSchema,
+        },
+        async ({ owner, mint, programId, commitment }) => {
+          const ownerPk = new PublicKey(owner);
 
-        const config: GetProgramAccountsConfig = {};
-        if (commitment) {
-          config.commitment = commitment as Commitment;
-        }
-        if (dataSize !== undefined) {
-          config.filters = [{ dataSize }];
-        }
+          const filter = mint
+            ? { mint: new PublicKey(mint) }
+            : {
+                programId: new PublicKey(
+                  programId || "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
+                ),
+              };
 
-        const accounts = await withRetries(() =>
-          conn().getProgramAccounts(pk, config),
-        );
-        return { content: [{ type: "text", text: JSON.stringify(accounts) }] };
-      },
-    );
+          const accounts = await withRetries(() =>
+            conn().getTokenAccountsByOwner(
+              ownerPk,
+              filter,
+              commitment ? { commitment: commitment as Commitment } : undefined,
+            ),
+          );
+          return {
+            content: [{ type: "text", text: JSON.stringify(accounts) }],
+          };
+        },
+      );
 
-    await server.connect(transport);
-  } else {
-    res.status(400).json({
-      jsonrpc: "2.0",
-      error: {
-        code: -32000,
-        message: "Bad Request: No valid session ID provided",
-      },
-      id: null,
-    });
-    return;
-  }
+      server.registerTool(
+        "solana.get_program_accounts",
+        {
+          title: "Get program accounts (PREMIUM)",
+          description: "Get all accounts owned by a program",
+          inputSchema: getProgramAccountsSchema,
+        },
+        async ({ programId, dataSize, commitment }) => {
+          const pk = new PublicKey(programId);
 
-  await transport.handleRequest(req, res, req.body);
-});
+          const config: GetProgramAccountsConfig = {};
+          if (commitment) {
+            config.commitment = commitment as Commitment;
+          }
+          if (dataSize !== undefined) {
+            config.filters = [{ dataSize }];
+          }
+
+          const accounts = await withRetries(() =>
+            conn().getProgramAccounts(pk, config),
+          );
+          return {
+            content: [{ type: "text", text: JSON.stringify(accounts) }],
+          };
+        },
+      );
+
+      await server.connect(transport);
+    } else {
+      res.status(400).json({
+        jsonrpc: "2.0",
+        error: {
+          code: -32000,
+          message: "Bad Request: No valid session ID provided",
+        },
+        id: null,
+      });
+      return;
+    }
+
+    await transport.handleRequest(req, res, req.body);
+  },
+);
 
 const handlePremiumSessionRequest = async (
   req: express.Request,

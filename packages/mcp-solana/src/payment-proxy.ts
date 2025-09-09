@@ -22,10 +22,7 @@ app.use(express.text({ type: "text/event-stream" }));
 
 const keypair = loadKeypair(config.PAYER_KEYPAIR_PATH);
 const assetMint = new PublicKey(config.ASSET_ADDRESS);
-const wallet = createWallet(
-  keypair,
-  config.FAREMETER_NETWORK as "devnet" | "mainnet-beta",
-);
+const wallet = createWallet(keypair, config.FAREMETER_NETWORK);
 
 let paymentHandler: PaymentHandler;
 if (config.FAREMETER_SCHEME === "exact") {
@@ -60,9 +57,29 @@ async function proxyRequest(
   headers["host"] = targetHost;
   headers["accept"] = "application/json, text/event-stream";
 
+  // Fix initialization requests that are missing clientInfo to ensure the
+  // initialization request has all required fields
+  let requestBody = req.body;
+  if (req.body?.method === "initialize" && req.body?.params) {
+    if (!req.body.params.clientInfo) {
+      requestBody = {
+        ...req.body,
+        params: {
+          ...req.body.params,
+          protocolVersion: req.body.params.protocolVersion || "2024-11-05",
+          capabilities: req.body.params.capabilities || {},
+          clientInfo: {
+            name: "mcp-proxy-client",
+            version: "1.0.0",
+          },
+        },
+      };
+    }
+  }
+
   const body =
     req.method !== "GET" && req.method !== "HEAD"
-      ? JSON.stringify(req.body)
+      ? JSON.stringify(requestBody)
       : undefined;
 
   if (body) {
@@ -78,12 +95,31 @@ async function proxyRequest(
     fetchOptions.body = body;
   }
 
+  // Check if this is an MCP method that should bypass payment
+  const shouldBypassPayment =
+    req.body?.method &&
+    [
+      "initialize",
+      "initialized",
+      "notifications/initialized",
+      "tools/list",
+      "prompts/list",
+      "resources/list",
+    ].includes(req.body.method);
+
   const x402Fetch = wrap(fetch, {
-    handlers: [paymentHandler],
+    handlers: [
+      async (ctx, accepts) => {
+        return await paymentHandler(ctx, accepts);
+      },
+    ],
   });
 
-  const fetchFn = handlePayment ? x402Fetch : fetch;
+  const fetchFn = handlePayment && !shouldBypassPayment ? x402Fetch : fetch;
+
   const response = await fetchFn(targetUrl, fetchOptions);
+
+  const responseText = await response.text();
 
   res.status(response.status);
   response.headers.forEach((value, key) => {
@@ -96,8 +132,7 @@ async function proxyRequest(
     }
   });
 
-  const responseBody = await response.text();
-  res.send(responseBody);
+  res.send(responseText);
 }
 
 app.all("/mcp/premium", async (req, res) => {

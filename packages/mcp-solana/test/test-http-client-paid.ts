@@ -2,10 +2,11 @@ import tap from "tap";
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import type { TextContent } from "@modelcontextprotocol/sdk/types.js";
 import { Connection, PublicKey } from "@solana/web3.js";
-import { createPaymentHandler } from "@faremeter/x-solana-settlement";
+import { createPaymentHandler } from "@faremeter/payment-solana-exact";
 import { startTestServer, PREMIUM_URL, TEST_CONFIG } from "./server-utils.js";
 import { ClientTransport } from "../src/client-transport.js";
 import { loadKeypair, createWallet } from "../src/utils.js";
+import type { Commitment, FaremeterNetwork } from "../src/config.js";
 
 const USDC_DEV_MINT = new PublicKey(TEST_CONFIG.ASSET_ADDRESS);
 let client: Client | undefined;
@@ -38,7 +39,7 @@ tap.test("MCP Premium Endpoints with x402 Payment", async (t) => {
   const keypair = loadKeypair(TEST_CONFIG.PAYER_KEYPAIR_PATH);
   const wallet = createWallet(
     keypair,
-    TEST_CONFIG.FAREMETER_NETWORK as "devnet" | "mainnet-beta",
+    TEST_CONFIG.FAREMETER_NETWORK as FaremeterNetwork,
   );
 
   t.test("Premium endpoints should require payment", async (t) => {
@@ -46,17 +47,16 @@ tap.test("MCP Premium Endpoints with x402 Payment", async (t) => {
       method: "POST",
       headers: {
         "content-type": "application/json",
+        accept: "application/json, text/event-stream",
         "mcp-session-id": "test-session-1",
       },
       body: JSON.stringify({
         jsonrpc: "2.0",
-        method: "initialize",
+        method: "tools/call",
         params: {
-          protocolVersion: "2024-11-05",
-          capabilities: {},
-          clientInfo: {
-            name: "test-client",
-            version: "1.0.0",
+          name: "solana.get_transaction",
+          arguments: {
+            signature: "test",
           },
         },
         id: 1,
@@ -89,12 +89,20 @@ tap.test("MCP Premium Endpoints with x402 Payment", async (t) => {
       TEST_CONFIG.FAREMETER_SCHEME,
       "Should require Solana payment",
     );
-    t.equal(acceptOption.network, "devnet", "Should be on devnet");
+    t.equal(acceptOption.network, "solana-devnet", "Should be on devnet");
     t.ok(acceptOption.maxAmountRequired, "Should specify amount required");
   });
 
   t.test("Premium endpoints should work with x402 payment", async (t) => {
-    const paymentHandler = createPaymentHandler(wallet, USDC_DEV_MINT);
+    const connection = new Connection(
+      TEST_CONFIG.SOLANA_RPC_URL,
+      TEST_CONFIG.COMMITMENT as Commitment,
+    );
+    const paymentHandler = createPaymentHandler(
+      wallet,
+      USDC_DEV_MINT,
+      connection,
+    );
 
     transport = new ClientTransport(new URL(PREMIUM_URL), [paymentHandler]);
 
@@ -166,7 +174,7 @@ tap.test("MCP Premium Endpoints with x402 Payment", async (t) => {
     const keypair = loadKeypair(TEST_CONFIG.PAYER_KEYPAIR_PATH);
     const connection = new Connection(
       TEST_CONFIG.SOLANA_RPC_URL,
-      TEST_CONFIG.COMMITMENT as "confirmed" | "finalized",
+      TEST_CONFIG.COMMITMENT as Commitment,
     );
 
     const solBalance = await connection.getBalance(keypair.publicKey);

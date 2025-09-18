@@ -12,13 +12,13 @@ all: install build start
 	@echo "$(G)✓ Ready at $(N8N_URL)$(N)"
 
 install:
-	@pnpm install
+	@npm install
 
 build: install
-	@pnpm run build && pnpm run docker:build
+	@npm run build && npm run docker:build
 
 start:
-	@docker ps -q -f name=n8n | grep -q . || pnpm run docker:start
+	@docker ps -q -f name=n8n | grep -q . || npm run docker:start
 	@until curl -s $(N8N_URL) > /dev/null 2>&1; do sleep 1; done
 
 stop:

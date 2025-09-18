@@ -1,0 +1,17 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "module": "commonjs",
+    "moduleResolution": "node",
+    "noEmit": false,
+    "outDir": "./dist",
+    "rootDir": "./",
+    "verbatimModuleSyntax": false,
+    "isolatedModules": false,
+    "composite": false,
+    "typeRoots": ["./node_modules/@types", "./types"],
+    "types": ["node"]
+  },
+  "include": ["nodes/**/*.ts", "credentials/**/*.ts", "src/**/*.ts"],
+  "exclude": ["node_modules", "dist", "test"]
+}

@@ -1,0 +1,17 @@
+{
+  "node": "n8n-nodes-faremeter.x402Webhook",
+  "nodeVersion": "1.0",
+  "codexVersion": "1.0",
+  "categories": ["Core Nodes", "Trigger"],
+  "resources": {
+    "primaryDocumentation": [
+      {
+        "url": "https://github.com/abklabs/corbits-demos"
+      }
+    ]
+  },
+  "subcategories": {
+    "Core Nodes": ["Helpers", "Flow"]
+  },
+  "alias": ["Webhook", "x402", "Payment", "Callback", "Trigger", "HTTP", "Faremeter"]
+}

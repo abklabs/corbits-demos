@@ -14,12 +14,12 @@ export const index = async () => {
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width,initial-scale=1" />
-<title>Couloir Amazon Demo</title>
+<title>Corbits Amazon Demo</title>
 <link rel="stylesheet" href="/app.css">
 </head>
 <header class="card" style="margin:20px auto; max-width:700px; text-align:center; position:relative;">
-  <a href="https://couloir.dev" target="_blank" rel="noopener">
-    <img style="height:100px; width:auto" src="https://couloir.dev/lovable-uploads/7ab1863f-dde2-4da9-b70b-e73adb4a5ceb.png" alt="Site logo" class="h-14 w-auto object-contain" loading="lazy">
+  <a href="https://corbits.dev" target="_blank" rel="noopener">
+    <img style="height:100px; width:auto" src="https://corbits.dev/lovable-uploads/7ab1863f-dde2-4da9-b70b-e73adb4a5ceb.png" alt="Site logo" class="h-14 w-auto object-contain" loading="lazy">
   </a>
   <h1 style="margin-bottom: 15px; margin-top: 0px;">
     Amazon x402 Demo
@@ -157,9 +157,9 @@ export const index = async () => {
   <script type="module" src="/app.js"></script>
 </body>
 <footer style="margin-top:20px; margin-bottom:15px; text-align:center; font-size:14px; color:#666;">
-  © ${new Date().getFullYear()} Couloir
-  <span style="font-size:18px; position:relative' top:-2px;">🗻</span> 
-  <a href="https://couloir.dev" target="_blank" rel="noopener" style="color:#666; text-decoration:none;">couloir.dev</a>
+  © ${new Date().getFullYear()} Corbits
+  <span style="font-size:18px; position:relative' top:-2px;">🗻</span>
+  <a href="https://corbits.dev" target="_blank" rel="noopener" style="color:#666; text-decoration:none;">corbits.dev</a>
 </footer>
 </html>`;
 

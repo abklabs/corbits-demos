@@ -17,9 +17,9 @@ interface OrderEmailData {
 
 function getNetworkFooter(): string {
   if (NETWORK === "mainnet" || NETWORK === "mainnet-beta") {
-    return `<p style="color: #666; font-size: 12px;">Couloir Amazon Demo - Paid with USDC on Solana</p>`;
+    return `<p style="color: #666; font-size: 12px;">Corbits Amazon Demo - Paid with USDC on Solana</p>`;
   }
-  return `<p style="color: #666; font-size: 12px;">Couloir Amazon Demo - Test order on Solana ${NETWORK}</p>`;
+  return `<p style="color: #666; font-size: 12px;">Corbits Amazon Demo - Test order on Solana ${NETWORK}</p>`;
 }
 
 function getSolanaExplorerUrl(signature: string): string {
@@ -111,11 +111,11 @@ function getEmailStyles(): string {
 }
 
 function getEmailFooter(): string {
-  const demoUrl = "https://couloir.dev";
+  const demoUrl = "https://corbits.dev";
   return `
     <div class="footer">
       <a href="${demoUrl}" target="_blank">
-        <img src="https://couloir.dev/lovable-uploads/7ab1863f-dde2-4da9-b70b-e73adb4a5ceb.png" alt="Couloir" />
+        <img src="https://corbits.dev/lovable-uploads/7ab1863f-dde2-4da9-b70b-e73adb4a5ceb.png" alt="Corbits" />
       </a>
       <div class="footer-text">
         ${getNetworkFooter()}
@@ -125,7 +125,7 @@ function getEmailFooter(): string {
 }
 
 export async function sendOrderCreatedEmail(data: OrderEmailData) {
-  const subject = `Couloir Amazon Order ${data.orderId.slice(0, 8)} - Awaiting Payment`;
+  const subject = `Corbits Amazon Order ${data.orderId.slice(0, 8)} - Awaiting Payment`;
   const html = `
     ${getEmailStyles()}
     <div class="email-container">
@@ -155,7 +155,7 @@ export async function sendOrderCreatedEmail(data: OrderEmailData) {
 }
 
 export async function sendPaymentReceivedEmail(data: OrderEmailData) {
-  const subject = `Couloir Amazon Order ${data.orderId.slice(0, 8)} - Payment Received`;
+  const subject = `Corbits Amazon Order ${data.orderId.slice(0, 8)} - Payment Received`;
   const html = `
     ${getEmailStyles()}
     <div class="email-container">
@@ -185,7 +185,7 @@ export async function sendPaymentReceivedEmail(data: OrderEmailData) {
 }
 
 export async function sendFulfillmentStartedEmail(data: OrderEmailData) {
-  const subject = `Couloir Amazon Order ${data.orderId.slice(0, 8)} - Fulfillment Started`;
+  const subject = `Corbits Amazon Order ${data.orderId.slice(0, 8)} - Fulfillment Started`;
   const html = `
     ${getEmailStyles()}
     <div class="email-container">
@@ -215,7 +215,7 @@ export async function sendFulfillmentStartedEmail(data: OrderEmailData) {
 }
 
 export async function sendOrderCompletedEmail(data: OrderEmailData) {
-  const subject = `Couloir Amazon Order ${data.orderId.slice(0, 8)} - Completed`;
+  const subject = `Corbits Amazon Order ${data.orderId.slice(0, 8)} - Completed`;
   const html = `
     ${getEmailStyles()}
     <div class="email-container">
@@ -225,7 +225,7 @@ export async function sendOrderCompletedEmail(data: OrderEmailData) {
       <p><strong>Status:</strong> Completed</p>
       ${data.signature ? `<p><strong>Transaction:</strong> <a href="${getSolanaExplorerUrl(data.signature)}">View on Solana Explorer</a></p>` : ""}
       <br>
-      <p>Thank you for trying the Couloir Amazon Demo.</p>
+      <p>Thank you for trying the Corbits Amazon Demo.</p>
       <hr>
       ${getEmailFooter()}
     </div>
@@ -243,7 +243,7 @@ export async function sendOrderCompletedEmail(data: OrderEmailData) {
 }
 
 export async function sendOrderFailedEmail(data: OrderEmailData) {
-  const subject = `Couloir Amazon Order ${data.orderId.slice(0, 8)} - Action Required`;
+  const subject = `Corbits Amazon Order ${data.orderId.slice(0, 8)} - Action Required`;
   const html = `
     ${getEmailStyles()}
     <div class="email-container">

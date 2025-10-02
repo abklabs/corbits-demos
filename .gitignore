@@ -11,3 +11,5 @@ tsconfig.tsbuildinfo
 keypairs
 .env
 .vt
+AGENTS.md
+CLAUDE.md

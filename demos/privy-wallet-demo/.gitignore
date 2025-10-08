@@ -1,0 +1,20 @@
+# Dependencies
+node_modules/
+build/node_modules/
+
+# Build output
+build/dist/
+
+# Environment
+.env
+.env.local
+
+# Val.town state
+.vt/
+
+# Logs
+*.log
+npm-debug.log*
+
+# OS
+.DS_Store

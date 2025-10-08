@@ -1,0 +1,14 @@
+.git
+.gitignore
+.vscode
+.cursorrules
+.DS_Store
+node_modules
+vendor
+.claude
+AGENTS.md
+CLAUDE.md
+*.json
+*.swp
+*.bak
+build

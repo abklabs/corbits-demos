@@ -1,0 +1,54 @@
+G := \033[32m
+Y := \033[33m
+B := \033[34m
+R := \033[31m
+N := \033[0m
+
+N8N_URL := http://localhost:5678
+
+.PHONY: all install build start stop restart demo overmind overmind-stop test logs clean format status help
+
+all: install build start
+	@echo "$(G)✓ Ready at $(N8N_URL)$(N)"
+
+install:
+	@npm install
+
+build: install
+	@npm run build && npm run docker:build
+
+start:
+	@docker ps -q -f name=n8n | grep -q . || npm run docker:start
+	@until curl -s $(N8N_URL) > /dev/null 2>&1; do sleep 1; done
+
+stop:
+	@docker stop n8n 2>/dev/null || true
+	@docker rm n8n 2>/dev/null || true
+
+restart: stop start
+
+demo: start
+	@cd examples/weather-demo && npm install && npx tsx create-demo-workflow.ts
+
+test: start
+	@cd examples/weather-demo && npm install && ./test-with-ngrok.sh
+
+logs:
+	@docker logs -f n8n
+
+clean: stop
+	@rm -rf dist node_modules
+
+format:
+	@npx prettier --write "**/*.{ts,js,json,md}"
+
+status:
+	@docker ps -f name=n8n --format "table {{.Status}}\t{{.Ports}}" 2>/dev/null || echo "Not running"
+
+help:
+	@echo "$(B)Commands:$(N)"
+	@echo "  make         Complete setup"
+	@echo "  make test    Test webhooks"
+	@echo "  make logs    View logs"
+	@echo "  make restart Restart container"
+	@echo "  make format  Format code with prettier"
